@@ -36,7 +36,7 @@ sudo -i
 ```
 #### Then:
 ```
-wget "https://raw.githubusercontent.com/hawshemi/ssl/main/ssl.sh" -O ssl.sh && chmod +x ssl.sh && bash ssl.sh 
+wget "https://raw.githubusercontent.com/hawshemi/tools/main/ssl/ssl.sh" -O ssl.sh && chmod +x ssl.sh && bash ssl.sh 
 ```
 
 
