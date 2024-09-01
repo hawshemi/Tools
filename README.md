@@ -13,11 +13,13 @@ wget "https://raw.githubusercontent.com/hawshemi/tools/main/grafana/purge_grafan
 ```
 
 #### [Nginx](https://github.com/hawshemi/Tools/tree/main/nginx)
+##### Nginx Installer:
 ```
 wget "https://raw.githubusercontent.com/hawshemi/tools/main/nginx/nginx-installer.sh" -O nginx-installer.sh && chmod +x nginx-installer.sh && bash nginx-installer.sh
 ```
 
 #### [SSL](https://github.com/hawshemi/Tools/tree/main/ssl)
+##### SSL Run:
 ```
 wget "https://raw.githubusercontent.com/hawshemi/tools/main/ssl/ssl.sh" -O ssl.sh && chmod +x ssl.sh && bash ssl.sh
 ```
