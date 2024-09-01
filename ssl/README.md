@@ -3,12 +3,9 @@
 ## This Bash script is to manage SSL certifications.
 ### It can perform the following tasks:
 
-
 1. Obtain SSL.
 
-
 2. Revoke SSL.
-
 
 3. Force Renew SSL.
 
@@ -38,17 +35,3 @@ sudo -i
 ```
 wget "https://raw.githubusercontent.com/hawshemi/tools/main/ssl/ssl.sh" -O ssl.sh && chmod +x ssl.sh && bash ssl.sh 
 ```
-
-
-## Menu Image
-![SSL Menu](https://github.com/hawshemi/SSL/assets/16742123/6bc9c28e-32fd-4569-b182-d29f952a5f09)
-
-
-
-## Disclaimer
-This script is provided as-is, without any warranty or guarantee. You can use it at your own risk.
-
-
-## License
-This script is licensed under the MIT License.
-
