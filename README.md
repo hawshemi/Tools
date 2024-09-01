@@ -23,3 +23,9 @@ wget "https://raw.githubusercontent.com/hawshemi/tools/main/nginx/nginx-installe
 ```
 wget "https://raw.githubusercontent.com/hawshemi/tools/main/ssl/ssl.sh" -O ssl.sh && chmod +x ssl.sh && bash ssl.sh
 ```
+
+#### [Geodata](https://github.com/hawshemi/Tools/tree/main/geodata)
+##### Geodata Installer:
+```
+wget "https://raw.githubusercontent.com/hawshemi/tools/main/geodata/geodata-installer.sh" -O geodata-installer.sh && chmod +x geodata-installer.sh && bash geodata-installer.sh
+```
