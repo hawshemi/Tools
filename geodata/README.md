@@ -4,7 +4,7 @@ This script automates the download and installation of geodata files required fo
 
 ## Features
 
-- Downloads the latest geodata files from Chocolate4u repository:
+- Downloads the latest geodata files from [Chocolate4u](https://github.com/Chocolate4U/Iran-v2ray-rules/) repository:
   - `geoip.dat`
   - `geosite.dat`
   - `security-ip.dat`
