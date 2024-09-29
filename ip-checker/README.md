@@ -32,16 +32,18 @@ A simple Go script to retrieve detailed IP information, including ASN and threat
 ## Usage
 
 1. Export your `IPDATA_API_KEY`:
+2. 
     Linux:
     ```bash
     export IPDATA_API_KEY=your_api_key
     ```
+    
     Windows:
     ```bash
     $Env:IPDATA_API_KEY = "your_api_key"
     ```
     
-2. Run the script:
+3. Run the script:
 
     ```bash
     go run main.go --ip <IP_ADDRESS>
