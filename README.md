@@ -24,6 +24,12 @@ wget "https://raw.githubusercontent.com/hawshemi/tools/main/nginx/nginx-installe
 wget "https://raw.githubusercontent.com/hawshemi/tools/main/ssl/ssl.sh" -O ssl.sh && chmod +x ssl.sh && bash ssl.sh
 ```
 
+### [DNS Tester](https://github.com/hawshemi/Tools/tree/main/dns-tester)
+#### DNS Tester:
+```
+wget ""
+```
+
 ### [Geodata](https://github.com/hawshemi/Tools/tree/main/geodata)
 #### Geodata Installer:
 ```
