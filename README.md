@@ -27,7 +27,7 @@ wget "https://raw.githubusercontent.com/hawshemi/tools/main/ssl/ssl.sh" -O ssl.s
 ### [DNS Tester](https://github.com/hawshemi/Tools/tree/main/dns-tester)
 #### DNS Tester:
 ```
-wget ""
+wget "https://raw.githubusercontent.com/hawshemi/tools/main/dns-tester/main.go" -O main.go && chmod +x main.go && go run main.go
 ```
 
 ### [Geodata](https://github.com/hawshemi/Tools/tree/main/geodata)
