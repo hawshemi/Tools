@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Struct to hold the ipdata.co response for ASN data
+// Data structures
 type ASNData struct {
 	ASN    string `json:"asn"`
 	Name   string `json:"name"`
@@ -23,7 +24,6 @@ type ASNData struct {
 	Type   string `json:"type"`
 }
 
-// Struct to hold the ipdata.co response for Threat data
 type ThreatData struct {
 	IsTOR           bool `json:"is_tor"`
 	IsProxy         bool `json:"is_proxy"`
@@ -40,175 +40,170 @@ type ThreatData struct {
 	} `json:"blocklists"`
 }
 
+// Results struct to hold all collected data
+type IPResults struct {
+	ASNData          ASNData
+	ThreatData       ThreatData
+	BrowserLeaksData map[string]string
+}
+
+// HTTP client with timeout
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
 func main() {
-	// Define the --ip flag to accept an IP address from the user
 	ip := flag.String("ip", "", "IP address to lookup")
 	flag.Parse()
 
-	// Ensure that the IP flag is provided
 	if *ip == "" {
-		logrus.Fatalf("Please provide an IP address using the --ip flag")
+		logrus.Fatal("Please provide an IP address using the --ip flag")
 	}
 
-	// Validate IP Address
 	if !isValidIP(*ip) {
 		logrus.Fatalf("Invalid IP address: %s", *ip)
 	}
 
-	// Get the API key from the environment variable
 	apiKey := os.Getenv("IPDATA_API_KEY")
 	if apiKey == "" {
-		logrus.Fatal("API key is missing. Set it via the IPDATA_API_KEY environment variable.")
+		logrus.Fatal("API key missing. Set IPDATA_API_KEY environment variable")
 	}
 
+	results := fetchIPData(*ip, apiKey)
+	displayResults(results)
+}
+
+// fetchIPData fetches all data concurrently
+func fetchIPData(ip, apiKey string) IPResults {
+	var results IPResults
+	var wg sync.WaitGroup
+	wg.Add(3)
+
 	// Fetch ASN data
-	asnURL := fmt.Sprintf("https://api.ipdata.co/%s/asn?api-key=%s", *ip, apiKey)
-	logrus.Info("Fetching ASN Data from ipdata.co.")
-	asnData := fetchASNData(asnURL)
+	go func() {
+		defer wg.Done()
+		url := fmt.Sprintf("https://api.ipdata.co/%s/asn?api-key=%s", ip, apiKey)
+		logrus.Info("Fetching ASN data...")
+		results.ASNData = fetchJSON[ASNData](url)
+	}()
 
 	// Fetch Threat data
-	threatURL := fmt.Sprintf("https://api.ipdata.co/%s/threat?api-key=%s", *ip, apiKey)
-	logrus.Info("Fetching Threat Data from ipdata.co.")
-	threatData := fetchThreatData(threatURL)
+	go func() {
+		defer wg.Done()
+		url := fmt.Sprintf("https://api.ipdata.co/%s/threat?api-key=%s", ip, apiKey)
+		logrus.Info("Fetching Threat data...")
+		results.ThreatData = fetchJSON[ThreatData](url)
+	}()
 
-	// Scrape and display data from browserleaks.com
-	browserLeaksURL := fmt.Sprintf("https://browserleaks.com/ip/%s", *ip)
-	logrus.Info("Fetching data from browserleaks.com.")
-	browserLeaksData := fetchBrowserLeaksData(browserLeaksURL)
+	// Fetch BrowserLeaks data
+	go func() {
+		defer wg.Done()
+		url := fmt.Sprintf("https://browserleaks.com/ip/%s", ip)
+		logrus.Info("Fetching BrowserLeaks data...")
+		results.BrowserLeaksData = fetchBrowserLeaksData(url)
+	}()
 
-	// Display the results in a nice table format
-	displayResults(asnData, threatData, browserLeaksData)
+	wg.Wait()
+	return results
 }
 
-// Create a reusable HTTP client with a timeout
-var httpClient = &http.Client{
-	Timeout: 10 * time.Second, // 10 seconds timeout for all HTTP requests
-}
-
-// Function to make a GET request and return the response
-func fetchJSON(url string, target interface{}) {
+// fetchJSON is a generic function to fetch and decode JSON
+func fetchJSON[T any](url string) T {
+	var result T
 	resp, err := httpClient.Get(url)
 	if err != nil {
-		logrus.Fatalf("Failed to fetch data from %s: %v", url, err)
+		logrus.Fatalf("Failed to fetch %s: %v", url, err)
 	}
 	defer resp.Body.Close()
 
-	// Handle rate limiting
 	if resp.StatusCode == http.StatusTooManyRequests {
 		retryAfter := resp.Header.Get("Retry-After")
-		logrus.Fatalf("Rate limit exceeded. Try again after %s seconds.", retryAfter)
+		logrus.Fatalf("Rate limit exceeded. Retry after %s seconds", retryAfter)
 	}
 
-	// Check for non-OK response status
 	if resp.StatusCode != http.StatusOK {
-		logrus.Fatalf("Error: received status code %d from %s", resp.StatusCode, url)
+		logrus.Fatalf("Unexpected status code %d from %s", resp.StatusCode, url)
 	}
 
-	// Decode JSON response into target struct
-	err = json.NewDecoder(resp.Body).Decode(target)
-	if err != nil {
-		logrus.Fatalf("Failed to decode JSON response from %s: %v", url, err)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		logrus.Fatalf("Failed to decode JSON from %s: %v", url, err)
 	}
+	return result
 }
 
-// Fetch ASN data
-func fetchASNData(url string) ASNData {
-	var data ASNData
-	fetchJSON(url, &data)
-	return data
-}
-
-// Fetch Threat data
-func fetchThreatData(url string) ThreatData {
-	var data ThreatData
-	fetchJSON(url, &data)
-	return data
-}
-
-// Function to extract a specific field from the HTML document
-func extractField(doc *goquery.Document, field string) string {
-	return doc.Find(fmt.Sprintf("td:contains('%s')", field)).Next().Text()
-}
-
-// Fetch and parse data from browserleaks.com
+// fetchBrowserLeaksData scrapes data from browserleaks.com
 func fetchBrowserLeaksData(url string) map[string]string {
-	data := make(map[string]string)
-
 	resp, err := httpClient.Get(url)
 	if err != nil {
-		logrus.Fatalf("Failed to fetch data from %s: %v", url, err)
+		logrus.Fatalf("Failed to fetch BrowserLeaks data: %v", err)
 	}
 	defer resp.Body.Close()
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
-		logrus.Fatalf("Failed to parse HTML from browserleaks.com: %v", err)
+		logrus.Fatalf("Failed to parse BrowserLeaks HTML: %v", err)
 	}
 
-	data["Country"] = extractField(doc, "Country")
-	data["ISP"] = extractField(doc, "ISP")
-	data["Organization"] = extractField(doc, "Organization")
-	data["Usage Type"] = extractField(doc, "Usage Type")
-
-	// Set default values if necessary
-	for key, value := range data {
-		if value == "" {
-			data[key] = "N/A"
+	fields := []string{"Country", "ISP", "Organization", "Usage Type"}
+	data := make(map[string]string, len(fields))
+	for _, field := range fields {
+		data[field] = doc.Find(fmt.Sprintf("td:contains('%s')", field)).Next().Text()
+		if data[field] == "" {
+			data[field] = "N/A"
 		}
 	}
-
 	return data
 }
 
-// Display formatted data in a table
-func displayTable(w *tabwriter.Writer, category, value string) {
-	fmt.Fprintf(w, "%s\t%s\t\n", category, value)
-}
-
-func displayResults(asnData ASNData, threatData ThreatData, browserLeaksData map[string]string) {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.Debug)
-
-	fmt.Fprintln(w, "\nCategory\tValue\t")
+// displayResults shows all collected data in a tabulated format
+func displayResults(results IPResults) {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "\nCategory\tValue")
 
 	// ASN Data
-	displayTable(w, "ASN", asnData.ASN)
-	displayTable(w, "ASN Name", asnData.Name)
+	fmt.Fprintf(w, "ASN\t%s\n", results.ASNData.ASN)
+	fmt.Fprintf(w, "ASN Name\t%s\n", results.ASNData.Name)
+	fmt.Fprintf(w, "ASN Type\t%s\n", results.ASNData.Type)
 
-	// Browserleaks Data
-	for key, value := range browserLeaksData {
-		displayTable(w, key, value)
+	// BrowserLeaks Data
+	for key, value := range results.BrowserLeaksData {
+		fmt.Fprintf(w, "%s\t%s\n", key, value)
 	}
 
-	displayTable(w, "ASN Type", asnData.Type)
-
 	// Threat Data
-	displayTable(w, "Is TOR", fmt.Sprintf("%t", threatData.IsTOR))
-	displayTable(w, "Is Proxy", fmt.Sprintf("%t", threatData.IsProxy))
-	displayTable(w, "Is Datacenter", fmt.Sprintf("%t", threatData.IsDatacenter))
-	displayTable(w, "Is Anonymous", fmt.Sprintf("%t", threatData.IsAnonymous))
-	displayTable(w, "Is Known Attacker", fmt.Sprintf("%t", threatData.IsKnownAttacker))
-	displayTable(w, "Is Known Abuser", fmt.Sprintf("%t", threatData.IsKnownAbuser))
-	displayTable(w, "Is Threat", fmt.Sprintf("%t", threatData.IsThreat))
-	displayTable(w, "Is Bogon", fmt.Sprintf("%t", threatData.IsBogon))
+	threatFields := map[string]bool{
+		"Is TOR":            results.ThreatData.IsTOR,
+		"Is Proxy":          results.ThreatData.IsProxy,
+		"Is Datacenter":     results.ThreatData.IsDatacenter,
+		"Is Anonymous":      results.ThreatData.IsAnonymous,
+		"Is Known Attacker": results.ThreatData.IsKnownAttacker,
+		"Is Known Abuser":   results.ThreatData.IsKnownAbuser,
+		"Is Threat":         results.ThreatData.IsThreat,
+		"Is Bogon":          results.ThreatData.IsBogon,
+	}
+	for field, value := range threatFields {
+		fmt.Fprintf(w, "%s\t%t\n", field, value)
+	}
 
-	if len(threatData.Blocklists) > 0 {
-		fmt.Fprintln(w, "Blocklists Found:")
-		for i, blocklist := range threatData.Blocklists {
-			displayTable(w, fmt.Sprintf("Blocklist %d Name", i+1), blocklist.Name)
-			displayTable(w, "Site", blocklist.Site)
-			displayTable(w, "Type", blocklist.Type)
-			if i < len(threatData.Blocklists)-1 {
-				fmt.Fprintln(w, "\t\t---\t")
+	// Blocklists
+	if len(results.ThreatData.Blocklists) > 0 {
+		fmt.Fprintln(w, "Blocklists:")
+		for i, b := range results.ThreatData.Blocklists {
+			fmt.Fprintf(w, "Blocklist %d Name\t%s\n", i+1, b.Name)
+			fmt.Fprintf(w, "Site\t%s\n", b.Site)
+			fmt.Fprintf(w, "Type\t%s\n", b.Type)
+			if i < len(results.ThreatData.Blocklists)-1 {
+				fmt.Fprintln(w, "---\t---")
 			}
 		}
 	} else {
-		displayTable(w, "Blocklists", "None")
+		fmt.Fprintln(w, "Blocklists\tNone")
 	}
 
 	w.Flush()
 }
 
-// Function to validate IP address format
+// isValidIP validates IP address format
 func isValidIP(ip string) bool {
 	return net.ParseIP(ip) != nil
 }
