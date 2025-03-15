@@ -15,15 +15,7 @@ This bash script installs or upgrades the latest version of the Go programming l
 - A Debian/Ubuntu-based system.
 - Root privileges (or using `sudo`).
 
-## Usage
-
-1. **Make the script executable:**
+## Run
 
    ```bash
-   chmod +x go-installer.sh
-
-2. **Run:**
-
-   ```bash
-   sudo ./go-installer.sh
-
+   wget "https://raw.githubusercontent.com/hawshemi/tools/main/go-installer/go-installer.sh" -O go-installer.sh && chmod +x go-installer.sh && bash go-installer.sh
