@@ -2,7 +2,7 @@
 ## Various scripts to make my life easier. 
 
 ### [Grafana](https://github.com/hawshemi/Tools/tree/main/grafana)
-#### Grafana Installer:
+#### Grafana+Prometheus Installer:
 ```bash
 wget "https://raw.githubusercontent.com/hawshemi/tools/main/grafana/install_grafana.sh" -O install_grafana.sh && chmod +x install_grafana.sh && bash install_grafana.sh
 ```
