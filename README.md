@@ -33,7 +33,7 @@ wget "https://raw.githubusercontent.com/hawshemi/tools/main/ssl/ssl.sh" -O ssl.s
 ### [DNS Tester](https://github.com/hawshemi/Tools/tree/main/dns-tester)
 #### DNS Tester:
 ```bash
-wget "https://raw.githubusercontent.com/hawshemi/tools/main/dns-tester/main.go" -O main.go && chmod +x main.go && go run main.go
+curl -L "https://raw.githubusercontent.com/hawshemi/dns-tester/main/dns-tester-run.sh" -o dns-tester-run.sh && chmod +x dns-tester-run.sh && bash dns-tester-run.sh
 ```
 
 ---
